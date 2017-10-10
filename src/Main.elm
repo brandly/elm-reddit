@@ -91,7 +91,7 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    viewContainer
+    viewContainer []
         [ h1 []
             [ text "~~ reddit ~~"
             ]
@@ -101,31 +101,34 @@ view model =
         ]
 
 
-viewContainer : List (Html Msg) -> Html Msg
-viewContainer children =
-    div
-        [ style
-            [ ( "width", "100%" )
-            , ( "max-width", "700px" )
-            , ( "margin", "0 auto" )
-            ]
+viewContainer =
+    styled div
+        [ ( "width", "100%" )
+        , ( "max-width", "700px" )
+        , ( "margin", "0 auto" )
         ]
-        children
 
 
 viewPost : Post -> Html Msg
 viewPost post =
-    div
-        [ style
-            [ ( "margin", "12px 0" )
-            ]
-        ]
-        [ span
-            [ style
-                [ ( "font-weight", "bold" )
-                , ( "padding", "0 3px" )
-                ]
-            ]
-            [ text (toString post.ups) ]
+    let
+        wrap =
+            styled div [ ( "margin", "12px 0" ), ( "line-height", "1.4" ) ]
+
+        ups =
+            styled span [ ( "font-weight", "bold" ), ( "padding", "0 3px" ) ]
+    in
+    wrap []
+        [ ups [] [ text (toString post.ups) ]
         , a [ href post.url ] [ text post.title ]
         ]
+
+
+styled el css =
+    let
+        newEl attrs children =
+            el
+                ([ style css ] ++ attrs)
+                children
+    in
+    newEl

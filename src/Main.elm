@@ -1,6 +1,7 @@
 module Main exposing (..)
 
-import Html exposing (Html, button, div, h1, pre, text)
+import Html exposing (Html, a, button, div, h1, span, text)
+import Html.Attributes exposing (href, style)
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Json
@@ -22,19 +23,18 @@ type alias Post =
     , permalink : String
     , id : String
     , comments : Int
+    , ups : Int
     }
 
 
 type alias Model =
-    { name : String
-    , posts : List Post
+    { posts : List Post
     }
 
 
 initialModel : Model
 initialModel =
-    { name = "matt"
-    , posts = []
+    { posts = []
     }
 
 
@@ -75,12 +75,13 @@ decodePostCollection =
 
 decodePost : Json.Decoder Post
 decodePost =
-    Json.map5 Post
+    Json.map6 Post
         (Json.at [ "data", "title" ] Json.string)
         (Json.at [ "data", "url" ] Json.string)
         (Json.at [ "data", "permalink" ] Json.string)
         (Json.at [ "data", "id" ] Json.string)
         (Json.at [ "data", "num_comments" ] Json.int)
+        (Json.at [ "data", "ups" ] Json.int)
 
 
 subscriptions : Model -> Sub Msg
@@ -90,10 +91,41 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    div []
+    viewContainer
         [ h1 []
-            [ text ("hello " ++ model.name)
+            [ text "~~ reddit ~~"
             ]
-        , pre [] [ text (toString model) ]
         , button [ onClick LoadPosts ] [ text "load posts" ]
+        , div []
+            (model.posts |> List.map viewPost)
+        ]
+
+
+viewContainer : List (Html Msg) -> Html Msg
+viewContainer children =
+    div
+        [ style
+            [ ( "width", "100%" )
+            , ( "max-width", "700px" )
+            , ( "margin", "0 auto" )
+            ]
+        ]
+        children
+
+
+viewPost : Post -> Html Msg
+viewPost post =
+    div
+        [ style
+            [ ( "margin", "12px 0" )
+            ]
+        ]
+        [ span
+            [ style
+                [ ( "font-weight", "bold" )
+                , ( "padding", "0 3px" )
+                ]
+            ]
+            [ text (toString post.ups) ]
+        , a [ href post.url ] [ text post.title ]
         ]

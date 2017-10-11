@@ -1,7 +1,7 @@
 module Main exposing (..)
 
 import Html exposing (Html, a, button, div, form, h1, input, p, span, text)
-import Html.Attributes exposing (href, placeholder, style)
+import Html.Attributes exposing (href, placeholder, rel, style, target)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Json.Decode as Json
@@ -129,8 +129,13 @@ viewPost post =
     in
     wrap []
         [ ups [] [ text (toString post.ups) ]
-        , a [ href post.url ] [ text post.title ]
+        , externalLink [ href post.url ] [ text post.title ]
         ]
+
+
+externalLink : Element msg
+externalLink attrs children =
+    a ([ target "_blank", rel "noopener" ] ++ attrs) children
 
 
 type alias Element msg =

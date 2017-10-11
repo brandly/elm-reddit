@@ -1,8 +1,8 @@
 module Main exposing (..)
 
-import Html exposing (Html, a, button, div, h1, span, text)
-import Html.Attributes exposing (href, style)
-import Html.Events exposing (onClick)
+import Html exposing (Html, a, button, div, form, h1, input, p, span, text)
+import Html.Attributes exposing (href, placeholder, style)
+import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Json.Decode as Json
 
@@ -29,31 +29,37 @@ type alias Post =
 
 type alias Model =
     { posts : List Post
+    , subreddit : String
     }
 
 
 initialModel : Model
 initialModel =
     { posts = []
+    , subreddit = "javascript"
     }
 
 
 type Msg
     = LoadPosts
     | FetchPosts (Result Http.Error (List Post))
+    | UpdateSubreddit String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         LoadPosts ->
-            ( model, getPosts "javascript" )
+            ( model, getPosts model.subreddit )
 
         FetchPosts (Ok json) ->
             ( { model | posts = json }, Cmd.none )
 
         FetchPosts (Err e) ->
             ( Debug.log (toString e) model, Cmd.none )
+
+        UpdateSubreddit newVal ->
+            ( { model | subreddit = newVal }, Cmd.none )
 
 
 getPosts : String -> Cmd Msg
@@ -95,7 +101,9 @@ view model =
         [ h1 []
             [ text "~~ reddit ~~"
             ]
-        , button [ onClick LoadPosts ] [ text "load posts" ]
+        , form [ onSubmit LoadPosts ]
+            [ input [ placeholder "subreddit", onInput UpdateSubreddit ] []
+            ]
         , div []
             (model.posts |> List.map viewPost)
         ]
@@ -106,6 +114,7 @@ viewContainer =
         [ ( "width", "100%" )
         , ( "max-width", "700px" )
         , ( "margin", "0 auto" )
+        , ( "font-family", "sans-serif" )
         ]
 
 

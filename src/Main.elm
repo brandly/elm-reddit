@@ -133,6 +133,11 @@ viewPost post =
         ]
 
 
+type alias Element msg =
+    List (Html.Attribute msg) -> List (Html msg) -> Html msg
+
+
+styled : Element msg -> List ( String, String ) -> Element msg
 styled el css =
     let
         newEl attrs children =

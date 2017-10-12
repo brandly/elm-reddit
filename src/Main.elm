@@ -1,20 +1,65 @@
 module Main exposing (..)
 
-import Html exposing (Html, a, button, div, form, h1, input, p, span, text)
+import Html exposing (Html, a, button, div, form, h1, input, p, pre, span, text)
 import Html.Attributes exposing (href, placeholder, rel, style, target)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Json.Decode as Json
+import Navigation
+import UrlParser exposing ((</>), Parser, int, map, oneOf, parseHash, s, string, top)
 
 
 main : Program Never Model Msg
 main =
-    Html.program
-        { init = ( initialModel, Cmd.none )
+    Navigation.program UrlChange
+        { init = init
         , update = update
-        , view = view
+        , view = page
         , subscriptions = subscriptions
         }
+
+
+init : Navigation.Location -> ( Model, Cmd Msg )
+init location =
+    let
+        model =
+            Model [ location ] [] "" (parseLocation location)
+    in
+    loadDataForRoute model
+
+
+loadDataForRoute : Model -> ( Model, Cmd Msg )
+loadDataForRoute model =
+    case model.route of
+        SubredditRoute subreddit ->
+            ( { model | subreddit = subreddit }, getPosts subreddit )
+
+        _ ->
+            ( model, Cmd.none )
+
+
+matchers : Parser (Route -> a) a
+matchers =
+    oneOf
+        [ map HomeRoute top
+        , map SubredditRoute (s "r" </> string)
+        ]
+
+
+parseLocation : Navigation.Location -> Route
+parseLocation location =
+    case parseHash matchers location of
+        Just route ->
+            route
+
+        Nothing ->
+            NotFoundRoute
+
+
+type Route
+    = HomeRoute
+    | SubredditRoute String
+    | NotFoundRoute
 
 
 type alias Post =
@@ -28,15 +73,10 @@ type alias Post =
 
 
 type alias Model =
-    { posts : List Post
+    { history : List Navigation.Location
+    , posts : List Post
     , subreddit : String
-    }
-
-
-initialModel : Model
-initialModel =
-    { posts = []
-    , subreddit = "javascript"
+    , route : Route
     }
 
 
@@ -44,13 +84,19 @@ type Msg
     = LoadPosts
     | FetchPosts (Result Http.Error (List Post))
     | UpdateSubreddit String
+    | UrlChange Navigation.Location
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         LoadPosts ->
-            ( model, getPosts model.subreddit )
+            ( model
+            , Cmd.batch
+                [ getPosts model.subreddit
+                , Navigation.newUrl ("#r/" ++ model.subreddit)
+                ]
+            )
 
         FetchPosts (Ok json) ->
             ( { model | posts = json }, Cmd.none )
@@ -60,6 +106,13 @@ update msg model =
 
         UpdateSubreddit newVal ->
             ( { model | subreddit = newVal }, Cmd.none )
+
+        UrlChange location ->
+            loadDataForRoute
+                { model
+                    | history = location :: model.history
+                    , route = parseLocation location
+                }
 
 
 getPosts : String -> Cmd Msg
@@ -95,8 +148,26 @@ subscriptions model =
     Sub.none
 
 
-view : Model -> Html Msg
-view model =
+page : Model -> Html Msg
+page model =
+    case model.route of
+        HomeRoute ->
+            viewHome
+
+        SubredditRoute subreddit ->
+            viewSubreddit model
+
+        NotFoundRoute ->
+            notFoundView
+
+
+viewHome : Html Msg
+viewHome =
+    a [ href "#r/javascript" ] [ text "r/javascript" ]
+
+
+viewSubreddit : Model -> Html Msg
+viewSubreddit model =
     viewContainer []
         [ h1 []
             [ text "~~ reddit ~~"
@@ -130,6 +201,14 @@ viewPost post =
     wrap []
         [ ups [] [ text (toString post.ups) ]
         , externalLink [ href post.url ] [ text post.title ]
+        ]
+
+
+notFoundView : Html Msg
+notFoundView =
+    div []
+        [ h1 [] [ text "404" ]
+        , a [ href "#" ] [ text "go home" ]
         ]
 
 

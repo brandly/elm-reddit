@@ -5,6 +5,7 @@ import Html.Attributes exposing (href, placeholder, rel, style, target)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Json.Decode as Json
+import Json.Encode
 import Navigation
 import Set exposing (Set)
 import UrlParser exposing ((</>), Parser, int, map, oneOf, parseHash, s, string, top)
@@ -238,6 +239,13 @@ viewPost isExpanded post =
             else
                 "+"
 
+        plainBtn =
+            styled button
+                [ ( "background", "none" )
+                , ( "border", "none" )
+                , ( "cursor", "pointer" )
+                ]
+
         null =
             text ""
     in
@@ -245,7 +253,7 @@ viewPost isExpanded post =
         [ ups [] [ text (toString post.ups) ]
         , externalLink [ href post.url ] [ text post.title ]
         , if hasSelfText then
-            button [ onClick (ToggleExpandPost post) ]
+            plainBtn [ onClick (ToggleExpandPost post) ]
                 [ text ("[ " ++ buttonSymbol ++ " ]") ]
           else
             null
@@ -275,6 +283,11 @@ externalLink attrs children =
 
 type alias Element msg =
     List (Html.Attribute msg) -> List (Html msg) -> Html msg
+
+
+dangerousHtml : String -> Html msg
+dangerousHtml html =
+    div [ Html.Attributes.property "innerHTML" (Json.Encode.string html) ] []
 
 
 styled : Element msg -> List ( String, String ) -> Element msg

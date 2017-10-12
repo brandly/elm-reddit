@@ -6,6 +6,7 @@ import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Json.Decode as Json
 import Navigation
+import Set exposing (Set)
 import UrlParser exposing ((</>), Parser, int, map, oneOf, parseHash, s, string, top)
 
 
@@ -23,7 +24,7 @@ init : Navigation.Location -> ( Model, Cmd Msg )
 init location =
     let
         model =
-            Model [ location ] [] "" (parseLocation location)
+            Model [ location ] [] "" (parseLocation location) Set.empty
     in
     loadDataForRoute model
 
@@ -69,6 +70,7 @@ type alias Post =
     , id : String
     , comments : Int
     , ups : Int
+    , selftext : String
     }
 
 
@@ -77,6 +79,7 @@ type alias Model =
     , posts : List Post
     , subreddit : String
     , route : Route
+    , expandedPosts : Set String
     }
 
 
@@ -85,6 +88,7 @@ type Msg
     | FetchPosts (Result Http.Error (List Post))
     | UpdateSubreddit String
     | UrlChange Navigation.Location
+    | ToggleExpandPost Post
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -114,6 +118,16 @@ update msg model =
                     , route = parseLocation location
                 }
 
+        ToggleExpandPost post ->
+            let
+                expandedPosts =
+                    if Set.member post.id model.expandedPosts then
+                        Set.remove post.id model.expandedPosts
+                    else
+                        Set.insert post.id model.expandedPosts
+            in
+            ( { model | expandedPosts = expandedPosts }, Cmd.none )
+
 
 getPosts : String -> Cmd Msg
 getPosts subreddit =
@@ -134,13 +148,14 @@ decodePostCollection =
 
 decodePost : Json.Decoder Post
 decodePost =
-    Json.map6 Post
+    Json.map7 Post
         (Json.at [ "data", "title" ] Json.string)
         (Json.at [ "data", "url" ] Json.string)
         (Json.at [ "data", "permalink" ] Json.string)
         (Json.at [ "data", "id" ] Json.string)
         (Json.at [ "data", "num_comments" ] Json.int)
         (Json.at [ "data", "ups" ] Json.int)
+        (Json.at [ "data", "selftext" ] Json.string)
 
 
 subscriptions : Model -> Sub Msg
@@ -179,6 +194,9 @@ viewSubreddit model =
                 , ( "-webkit-margin-end", "0px" )
                 , ( "-webkit-padding-start", "40px" )
                 ]
+
+        expanded post =
+            Set.member post.id model.expandedPosts
     in
     viewContainer []
         [ h1 []
@@ -188,7 +206,7 @@ viewSubreddit model =
             [ input [ placeholder "subreddit", onInput UpdateSubreddit ] []
             ]
         , postList []
-            (model.posts |> List.map viewPost)
+            (model.posts |> List.map (\post -> viewPost (expanded post) post))
         ]
 
 
@@ -202,18 +220,39 @@ viewContainer =
         ]
 
 
-viewPost : Post -> Html Msg
-viewPost post =
+viewPost : Bool -> Post -> Html Msg
+viewPost isExpanded post =
     let
         wrap =
             styled li [ ( "margin", "12px 0" ), ( "line-height", "1.4" ) ]
 
         ups =
             styled span [ ( "font-weight", "bold" ), ( "padding", "0 3px" ) ]
+
+        hasSelfText =
+            String.length post.selftext > 0
+
+        buttonSymbol =
+            if isExpanded then
+                "-"
+            else
+                "+"
+
+        null =
+            text ""
     in
     wrap []
         [ ups [] [ text (toString post.ups) ]
         , externalLink [ href post.url ] [ text post.title ]
+        , if hasSelfText then
+            button [ onClick (ToggleExpandPost post) ]
+                [ text ("[ " ++ buttonSymbol ++ " ]") ]
+          else
+            null
+        , if hasSelfText && isExpanded then
+            p [] [ text post.selftext ]
+          else
+            null
         ]
 
 

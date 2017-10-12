@@ -1,6 +1,6 @@
 module Main exposing (..)
 
-import Html exposing (Html, a, button, div, form, h1, input, p, pre, span, text)
+import Html exposing (Html, a, button, div, form, h1, input, li, p, pre, span, text, ul)
 import Html.Attributes exposing (href, placeholder, rel, style, target)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
@@ -168,14 +168,26 @@ viewHome =
 
 viewSubreddit : Model -> Html Msg
 viewSubreddit model =
+    let
+        postList =
+            styled li
+                --[ ( "list-style", "none" )
+                -- not able to do this??
+                [ ( "-webkit-margin-before", "1em" )
+                , ( "-webkit-margin-after", "1em" )
+                , ( "-webkit-margin-start", "0px" )
+                , ( "-webkit-margin-end", "0px" )
+                , ( "-webkit-padding-start", "40px" )
+                ]
+    in
     viewContainer []
         [ h1 []
-            [ text "~~ reddit ~~"
+            [ text ("r/" ++ model.subreddit)
             ]
         , form [ onSubmit LoadPosts ]
             [ input [ placeholder "subreddit", onInput UpdateSubreddit ] []
             ]
-        , div []
+        , postList []
             (model.posts |> List.map viewPost)
         ]
 
@@ -186,6 +198,7 @@ viewContainer =
         , ( "max-width", "700px" )
         , ( "margin", "0 auto" )
         , ( "font-family", "sans-serif" )
+        , ( "color", "#444" )
         ]
 
 
@@ -193,7 +206,7 @@ viewPost : Post -> Html Msg
 viewPost post =
     let
         wrap =
-            styled div [ ( "margin", "12px 0" ), ( "line-height", "1.4" ) ]
+            styled li [ ( "margin", "12px 0" ), ( "line-height", "1.4" ) ]
 
         ups =
             styled span [ ( "font-weight", "bold" ), ( "padding", "0 3px" ) ]
@@ -214,7 +227,11 @@ notFoundView =
 
 externalLink : Element msg
 externalLink attrs children =
-    a ([ target "_blank", rel "noopener" ] ++ attrs) children
+    let
+        anchor =
+            styled a [ ( "color", "#444" ) ]
+    in
+    anchor ([ target "_blank", rel "noopener" ] ++ attrs) children
 
 
 type alias Element msg =
